@@ -33,3 +33,37 @@ dotnet run --project src/Cli -- --json
 dotnet publish src/Cli -c Release -r osx-arm64 --self-contained true
 ./src/Cli/bin/Release/net8.0/osx-arm64/publish/Cli
 ```
+
+## Додаткові завдання
+
+### 1. Self-contained під дві RID — порівняння розміру
+
+| RID        | Розмір каталогу publish |
+|------------|-------------------------|
+| osx-arm64  | 76 MB                   |
+| osx-x64    | 71 MB                   |
+
+Self-contained збірка включає власний runtime .NET, тому важить десятки МБ незалежно від розміру коду.
+
+### 2. Прапорець `--json`
+
+```bash
+dotnet run --project src/Cli -- --json
+```
+
+Виводить ту саму інформацію одним JSON-рядком (`System.Text.Json`); без прапорця — таблицею.
+
+### 3. Запуск у контейнері та порівняння OSDescription
+
+```bash
+docker run --rm -v "${PWD}":/src -w /src mcr.microsoft.com/dotnet/sdk:8.0 dotnet run --project src/Cli
+```
+
+Той самий код, різні ОС:
+
+| Запуск            | OSDescription                                  |
+|-------------------|------------------------------------------------|
+| Локально (host)   | `Darwin 22.1.0 ... RELEASE_ARM64_T8103` (macOS)|
+| У контейнері      | `Debian GNU/Linux 12 (bookworm)` (Linux)       |
+
+Архітектура в обох випадках `Arm64`, бо контейнер виконується на тому самому процесорі Apple Silicon. Це демонструє крос-платформність .NET: одна й та сама збірка працює на різних ОС без перекомпіляції коду.
