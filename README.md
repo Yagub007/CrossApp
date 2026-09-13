@@ -19,7 +19,7 @@ CrossApp/
   .gitignore
   src/
     Core/                     # class library (без точки входу) — спільна логіка
-      Core.csproj             # multi-targeting: net6.0;net8.0
+      Core.csproj             # multi-targeting: net8.0;net10.0
       EnvironmentInfo.cs      # namespace Core: EnvironmentReport (record) + EnvironmentInfo (static)
     Cli/                      # консольний застосунок (точка входу)
       Cli.csproj              # ProjectReference на Core
@@ -60,7 +60,7 @@ dotnet publish src/Cli -c Release -r osx-arm64 --self-contained false
 Запуск бінарника напряму з каталогу `publish` (без `dotnet run`):
 
 ```bash
-./src/Cli/bin/Release/net8.0/osx-arm64/publish/Cli
+./src/Cli/bin/Release/net10.0/osx-arm64/publish/Cli
 ```
 
 Розмір каталогу publish: `du -sh <шлях publish>` (Linux/macOS) або
@@ -74,22 +74,22 @@ dotnet publish src/Cli -c Release -r osx-arm64 --self-contained false
 
 | RID        | Режим                  | Розмір publish | Файлів | Потрібен runtime |
 |------------|------------------------|----------------|--------|------------------|
-| osx-arm64  | self-contained         | ~76 МБ         | 189    | ні               |
-| osx-arm64  | framework-dependent    | ~172 КБ        | 7      | так (.NET 8)     |
-| win-x64    | self-contained         | ~71 МБ         | 189    | ні               |
-| osx-arm64  | self-contained + SingleFile | ~71 МБ    | 3      | ні               |
+| osx-arm64  | self-contained         | ~83 МБ         | 193    | ні               |
+| osx-arm64  | framework-dependent    | ~172 КБ        | 7      | так (.NET 10)    |
+| win-x64    | self-contained         | ~77 МБ         | 194    | ні               |
+| osx-arm64  | self-contained + SingleFile | ~76 МБ    | 3      | ні               |
 
 > Числа зібрані на цій машині (macOS, Apple Silicon). Каталог `win-x64` не запускається на macOS — це крос-публікація для іншої ОС.
 
 ## Середовище
 
-.NET SDK 8.0 (встановлені також 6.0 і 7.0), macOS (osx-arm64). Крос-платформно: Windows x64 / Ubuntu x64.
+.NET SDK 10.0 (встановлений у `~/.dotnet`; у системі також є 8.0/7.0/6.0), macOS (osx-arm64). Крос-платформно: Windows x64 / Ubuntu x64.
 
-> **Про TFM.** У методичці приклади написані під `net10.0`. На цій машині встановлено .NET SDK 8.0 (найновіший доступний), тому весь проєкт таргетовано на `net8.0`; multi-targeting бібліотеки зроблено на реально доступних `net6.0;net8.0`. Директива умовної компіляції відповідно `#if NET8_0_OR_GREATER` замість `#if NET10_0_OR_GREATER`.
+> **Про TFM.** Проєкт таргетовано на `net10.0` (як у методичці). SDK встановлено локально в `~/.dotnet` (`dotnet-install.sh --channel 10.0`); щоб ним користуватися: `export DOTNET_ROOT="$HOME/.dotnet" && export PATH="$HOME/.dotnet:$PATH"`. Multi-targeting бібліотеки зроблено на `net8.0;net10.0`.
 
 ## Multi-targeting
 
-`Core.csproj` містить `<TargetFrameworks>net6.0;net8.0</TargetFrameworks>`, тому бібліотека компілюється окремо для кожного TFM — у `bin` з'являються підкаталоги `net6.0/` і `net8.0/`. У `EnvironmentInfo` є рядок, що відрізняється між TFM через `#if NET8_0_OR_GREATER` (поле `BuildNote`).
+`Core.csproj` містить `<TargetFrameworks>net8.0;net10.0</TargetFrameworks>`, тому бібліотека компілюється окремо для кожного TFM — у `bin` з'являються підкаталоги `net8.0/` і `net10.0/`. У `EnvironmentInfo` є рядок, що відрізняється між TFM через `#if NET10_0_OR_GREATER` (поле `BuildNote`).
 
 ## Додаткові завдання
 
@@ -107,7 +107,7 @@ dotnet run --project src/Cli -- --json
 dotnet publish src/Cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
 ```
 
-Об'єднує компоненти в один виконуваний файл: у каталозі publish замість ~189 файлів лишається 3 (сам бінарник + `.pdb` + native-бібліотека, яку не можна вбудувати). Розмір приблизно той самий (~71 МБ), бо runtime нікуди не зникає.
+Об'єднує компоненти в один виконуваний файл: у каталозі publish замість ~193 файлів лишається 3 (сам бінарник + `.pdb` + native-бібліотека, яку не можна вбудувати). Розмір приблизно той самий (~76 МБ), бо runtime нікуди не зникає.
 
 ### PublishTrimmed
 

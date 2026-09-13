@@ -23,10 +23,10 @@ public sealed record EnvironmentReport(
 public static class EnvironmentInfo
 {
     // Рядок, що компілюється по-різному для різних TFM (умовна компіляція).
-#if NET8_0_OR_GREATER
-    private const string BuildNote = "збірка під net8.0";
+#if NET10_0_OR_GREATER
+    private const string BuildNote = "збірка під net10.0";
 #else
-    private const string BuildNote = "збірка під net6.0";
+    private const string BuildNote = "збірка під net8.0";
 #endif
 
     public static EnvironmentReport Collect() => new(
