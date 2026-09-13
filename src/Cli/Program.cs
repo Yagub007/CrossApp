@@ -1,41 +1,28 @@
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using Core;
 
 // Коректний вивід кирилиці у консолі (зокрема на Windows).
 Console.OutputEncoding = Encoding.UTF8;
 
-// Дані про середовище виконання.
-var info = new
-{
-    OSDescription = RuntimeInformation.OSDescription,
-    OSVersion = Environment.OSVersion.ToString(),
-    ProcessArchitecture = RuntimeInformation.ProcessArchitecture.ToString(),
-    ClrVersion = Environment.Version.ToString(),
-    Runtime = RuntimeInformation.FrameworkDescription,
-    BaseDirectory = AppContext.BaseDirectory,
-    CurrentDirectory = Environment.CurrentDirectory
-};
+// Уся «інформація про середовище» живе в Core. Cli лише збирає звіт і друкує його.
+EnvironmentReport report = EnvironmentInfo.Collect();
 
-// Додаткове завдання 2: прапорець --json.
+// Додаткове завдання: прапорець --json (той самий звіт одним JSON-рядком).
 if (args.Contains("--json"))
 {
-    var json = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = false });
+    string json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = false });
     Console.WriteLine(json);
     return;
 }
 
-Console.WriteLine("CrossApp – практикум з крос-платформного програмування");
+Console.WriteLine("CrossApp – інформація про середовище");
 Console.WriteLine("Студент: Алієв Ягуб, група ФЕІ-32с");
 Console.WriteLine(new string('-', 52));
-
-Console.WriteLine($"ОС (OSDescription)   : {info.OSDescription}");
-Console.WriteLine($"ОС (Environment)     : {info.OSVersion}");
-Console.WriteLine($"Архітектура процесу  : {info.ProcessArchitecture}");
-Console.WriteLine($"Версія .NET (CLR)    : {info.ClrVersion}");
-Console.WriteLine($"Runtime              : {info.Runtime}");
-Console.WriteLine($"Каталог застосунку   : {info.BaseDirectory}");
-Console.WriteLine($"Поточний каталог     : {info.CurrentDirectory}");
-
-Console.WriteLine(new string('-', 52));
-Console.WriteLine("Предметна область: Замовлення (Customer, Product, Order, OrderLine)");
+Console.WriteLine($"ОС             : {report.OsDescription}");
+Console.WriteLine($"Runtime        : {report.FrameworkDescription}");
+Console.WriteLine($"Архітектура    : {report.ProcessArchitecture}");
+Console.WriteLine($"RID (визначено): {report.DetectedRid}");
+Console.WriteLine($"RID (від .NET) : {report.ReportedRid}");
+Console.WriteLine($"Каталог        : {report.BaseDirectory}");
+Console.WriteLine($"Збірка (TFM)   : {report.BuildNote}");
