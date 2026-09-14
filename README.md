@@ -111,7 +111,25 @@ dotnet publish src/Cli -c Release -r osx-arm64 --self-contained true -p:PublishS
 
 ### PublishTrimmed
 
-`-p:PublishTrimmed=true` видаляє невикористаний код і зменшує розмір, але **небезпечний для коду з рефлексією**: тример статично аналізує виклики й може викинути типи/члени, до яких звертаються лише через `Reflection` у рантаймі, — тоді застосунок падає вже під час виконання, а не збірки.
+```bash
+dotnet publish src/Cli -c Release -r osx-arm64 --self-contained true -p:PublishTrimmed=true
+```
+
+Тример видаляє невикористаний код: розмір впав із ~83 МБ (self-contained) до **~20 МБ**, файлів — із 193 до **35**.
+
+**Але це наочно показало, чому trimming небезпечний для коду з рефлексією.** Збірка видала попередження `warning IL2026` саме про `JsonSerializer.Serialize` (він використовує рефлексію), проте **зібралася успішно**. Звичайний вивід працює, а от режим `--json` **падає під час виконання**:
+
+```
+System.InvalidOperationException: Reflection-based serialization has been disabled for this application.
+```
+
+Тример статично не бачить, які типи знадобляться серіалізатору в рантаймі, тому викидає їх — і застосунок падає вже під час виконання, а не збірки. Виправлення — `System.Text.Json` source generator (`JsonSerializerContext`) замість рефлексії.
+
+| Режим (osx-arm64, self-contained) | Розмір | Файлів | `--json` |
+|-----------------------------------|--------|--------|----------|
+| звичайний                         | ~83 МБ | 193    | працює   |
+| + PublishSingleFile               | ~76 МБ | 3      | працює   |
+| + PublishTrimmed                  | ~20 МБ | 35     | **падає** (рефлексія) |
 
 ### Запуск у Linux-контейнері (порівняння OSDescription)
 

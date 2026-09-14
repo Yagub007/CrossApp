@@ -85,6 +85,10 @@ dotnet publish src/Cli -c Release -r osx-arm64 --self-contained false   # ≈ 17
 ```
 Self-contained великий **саме тому**, що всередині лежить увесь .NET (~80 МБ).
 
+**Додаткові прапорці публікації (робив у лабі):**
+- `-p:PublishSingleFile=true` — усе в один файл: замість 193 файлів лишається 3, розмір ≈ 76 МБ, запускається.
+- `-p:PublishTrimmed=true` — вирізає невикористаний код: ≈ 83 МБ → **≈ 20 МБ** (35 файлів). **Але небезпечно для рефлексії:** збірка дала `warning IL2026`, і хоча зібралася, режим `--json` **падає в рантаймі** (`Reflection-based serialization has been disabled`), бо тример викинув типи, які серіалізатор шукає через рефлексію. Фікс — source generator (`JsonSerializerContext`) замість рефлексії.
+
 ---
 
 ### record vs class (чому `EnvironmentReport` — record)
