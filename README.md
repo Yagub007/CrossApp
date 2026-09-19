@@ -81,6 +81,21 @@ dotnet publish src/Cli -c Release -r osx-arm64 --self-contained false
 
 > Числа зібрані на цій машині (macOS, Apple Silicon). Каталог `win-x64` не запускається на macOS — це крос-публікація для іншої ОС.
 
+## Імпорт даних (лабораторна 3)
+
+Дані домену описані незмінними record-типами в `Core/Dto` (`ProductDto`, `CustomerDto`, `ImportResult<T>`), розбір — у `Core/Import`. Логіка розбору живе в Core, а не в Program.cs (її викликатимуть сховище і тести на наступних тижнях).
+
+**Формат `data/sample.csv`:** роздільник — `;` (константа), перший рядок — заголовок `id;name;price;category`, кодування — **UTF-8**. Категорія необов'язкова (порожня → `null`). Числа парсяться з `InvariantCulture` (роздільник дробу — крапка).
+
+```bash
+dotnet run --project src/Cli                      # data/sample.csv (CSV)
+dotnet run --project src/Cli -- data/sample.json  # JSON-імпорт (дод. завдання 1)
+dotnet run --project src/Cli -- data/mixed.csv    # товари+клієнти за префіксом (дод. 2)
+dotnet run --project src/Cli -- data/nope.csv     # неіснуючий файл → код виходу 1
+```
+
+Імпорт повертає дані **разом** зі списком помилок: один пошкоджений рядок не перериває весь імпорт, а виводиться з номером рядка й причиною. Документація захисту — у `docs/lab03/`.
+
 ## Середовище
 
 .NET SDK 10.0 (встановлений у `~/.dotnet`; у системі також є 8.0/7.0/6.0), macOS (osx-arm64). Крос-платформно: Windows x64 / Ubuntu x64.
