@@ -96,6 +96,28 @@ dotnet run --project src/Cli -- data/nope.csv     # неіснуючий фай�
 
 Імпорт повертає дані **разом** зі списком помилок: один пошкоджений рядок не перериває весь імпорт, а виводиться з номером рядка й причиною. Документація захисту — у `docs/lab03/`.
 
+## Доменна модель (лабораторна 4)
+
+Сутності з поведінкою — у `Core/Domain` (записи тижня 3 лишаються як DTO у `Core/Dto`). Головний агрегат — `Order` із рядками `OrderLine`. Стан інкапсульовано (приватні поля / `private set`), створення — лише через фабрики `Create`, публічних конструкторів немає, колекція рядків назовні — тільки для читання (`AsReadOnly`). Бізнес-правила живуть у домені, Cli лише викликає методи й обробляє винятки.
+
+**Інваріанти:**
+
+| # | Правило | Тип винятку | Де перевіряється |
+|---|---------|-------------|------------------|
+| 1 | Ідентифікатор замовлення / клієнт не порожні | `ArgumentException` | `Order.Create` |
+| 2 | Ідентифікатор товару / назва рядка не порожні | `ArgumentException` | `OrderLine.Create` |
+| 3 | Ціна рядка ≥ 0 | `ArgumentOutOfRangeException` | `OrderLine.Create` |
+| 4 | Кількість у рядку > 0 | `ArgumentOutOfRangeException` | `OrderLine.Create` |
+| 5 | До підтвердженого/скасованого замовлення не додати рядок | `InvalidOperationException` | `Order.AddLine` |
+| 6 | Порожнє замовлення не підтвердити | `InvalidOperationException` | `Order.Confirm` |
+| 7 | Лише допустимі переходи статусів (Draft→Confirmed/Cancelled, Confirmed→Cancelled) | `InvalidOperationException` | `Order.RequireTransition` |
+
+Мапінг сутність ↔ DTO — `Order.ToDto()` / `Order.FromDto()` (FromDto проходить ті самі інваріанти). Запуск демонстрації:
+
+```bash
+dotnet run --project src/Cli    # сценарій успіху + сценарії порушення інваріантів
+```
+
 ## Середовище
 
 .NET SDK 10.0 (встановлений у `~/.dotnet`; у системі також є 8.0/7.0/6.0), macOS (osx-arm64). Крос-платформно: Windows x64 / Ubuntu x64.

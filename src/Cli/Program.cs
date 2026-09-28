@@ -1,66 +1,70 @@
-using System.Globalization;
 using System.Text;
+using Core.Domain;
 using Core.Dto;
 using Core.Import;
 
-// Коректний вивід кирилиці у консолі (зокрема на Windows).
 Console.OutputEncoding = Encoding.UTF8;
 
-// Шлях до файлу з args[0], інакше data/sample.csv. Path.Combine — крос-платформно.
-string path = args.Length > 0 ? args[0] : Path.Combine("data", "sample.csv");
+// ===== Сценарій 1: успіх — стан змінюється лише через методи =====
+Console.WriteLine("=== Сценарій 1: успіх ===");
+Order order = Order.Create("O-001", "C-001");
+order.AddLine("P-001", "Кава мелена 250г", 189.50m, 2);
+order.AddLine("P-003", "Цукор 1кг", 42.90m, 3);
+Console.WriteLine(order);
+order.Confirm();
+Console.WriteLine($"Після підтвердження: статус {order.Status}, сума {order.Total}");
 
-if (!File.Exists(path))
+// ===== Сценарій 2: порушення інваріантів — жодна відмова не змінює стан =====
+Console.WriteLine();
+Console.WriteLine("=== Сценарій 2: порушення інваріантів ===");
+Order draft = Order.Create("O-002", "C-002");
+TryDo("порожній клієнт", () => Order.Create("O-003", "   "));
+TryDo("кількість 0", () => draft.AddLine("P-001", "Кава", 189.50m, 0));
+TryDo("від'ємна ціна", () => draft.AddLine("P-002", "Чай", -5m, 1));
+TryDo("підтвердити порожнє", () => draft.Confirm());
+TryDo("додати рядок у підтверджене", () => order.AddLine("P-009", "Печиво", 54.80m, 1));
+TryDo("повторне підтвердження", () => order.Confirm());
+Console.WriteLine($"Стан order не змінився: статус {order.Status}, рядків {order.Lines.Count}, сума {order.Total}");
+
+// ===== Додаткове 3: переходи станів (enum + switch expression) =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 3: переходи статусів ===");
+Order cancelled = Order.Create("O-010", "C-010");
+cancelled.AddLine("P-001", "Кава мелена 250г", 189.50m, 1);
+cancelled.Cancel();
+Console.WriteLine($"O-010 статус: {cancelled.Status}");
+TryDo("підтвердити скасоване", () => cancelled.Confirm());
+
+// ===== Додаткове 1: побудова доменних рядків з імпорту тижня 3 =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 1: рядки з імпорту (дані + помилки) ===");
+string csv = Path.Combine("data", "sample.csv");
+if (File.Exists(csv))
 {
-    // Зрозуміле повідомлення замість необробленого винятку; показуємо, ДЕ шукали.
-    Console.WriteLine($"Файл не знайдено: {Path.GetFullPath(path)}");
-    return 1;
+    ImportResult<ProductDto> import = ProductCsvImporter.Load(csv);
+    (IReadOnlyList<OrderLine> lines, IReadOnlyList<string> errors) = OrderAssembler.BuildLines(import);
+    Console.WriteLine($"Побудовано рядків: {lines.Count}, відхилено: {errors.Count}");
 }
 
-Console.WriteLine($"Джерело: {path}");
-Console.WriteLine(new string('-', 52));
-
-// Мішаний каталог (додаткове завдання 2) — окремий формат із двома типами.
-if (Path.GetFileNameWithoutExtension(path).Contains("mixed", StringComparison.OrdinalIgnoreCase))
-{
-    MixedCatalog catalog = MixedCatalogImporter.Load(path);
-    Console.WriteLine($"Товарів: {catalog.Products.Count}, клієнтів: {catalog.Customers.Count}");
-    foreach (ProductDto p in catalog.Products.Take(5))
-        Console.WriteLine($"  товар    {p.Id,-7} {p.Name,-26} {p.Price.ToString("F2", CultureInfo.InvariantCulture),10}");
-    foreach (CustomerDto c in catalog.Customers.Take(5))
-        Console.WriteLine($"  клієнт   {c.Id,-7} {c.Name,-26} {c.Email ?? "-"}");
-    PrintErrors(catalog.Errors);
-    return 0;
-}
-
-// Вибір імпортера за розширенням файлу — switch expression (додаткове завдання 1).
-string ext = Path.GetExtension(path).ToLowerInvariant();
-ImportResult<ProductDto> result = ext switch
-{
-    ".json" => ProductJsonImporter.Load(path),
-    _ => ProductCsvImporter.Load(path)      // .csv і будь-що інше — як CSV
-};
-
-Console.WriteLine($"Завантажено записів: {result.Items.Count}");
-foreach (ProductDto p in result.Items.Take(5))
-    Console.WriteLine($"  {p.Id,-7} {p.Name,-26} {p.Price.ToString("F2", CultureInfo.InvariantCulture),10}  {p.Category ?? "-"}");
-
-PrintErrors(result.Errors);
-
-// Статистика імпорту одним рядком (додаткове завдання 3) — заготовка під звіти тижня 7.
-int total = result.Items.Count + result.Errors.Count;
-double badPct = total == 0 ? 0 : 100.0 * result.Errors.Count / total;
-Console.WriteLine(new string('-', 52));
-Console.WriteLine($"Статистика: усього {total}, прийнято {result.Items.Count}, " +
-                  $"пропущено {result.Errors.Count} ({badPct:F0}% помилок)");
+// ===== Мапінг ToDto / FromDto (для сховища тижня 5) =====
+Console.WriteLine();
+Console.WriteLine("=== Мапінг ToDto / FromDto ===");
+OrderDto dto = order.ToDto();
+Order restored = Order.FromDto(dto);
+Console.WriteLine($"Відновлено з DTO: {restored}");
 
 return 0;
 
-// Локальна функція: перелік пропущених рядків із номерами.
-static void PrintErrors(IReadOnlyList<string> errors)
+// Один обробник винятків для всіх сценаріїв: виводить тип і Message (без stack trace).
+static void TryDo(string title, Action action)
 {
-    if (errors.Count == 0)
-        return;
-    Console.WriteLine($"Пропущено рядків: {errors.Count}");
-    foreach (string e in errors)
-        Console.WriteLine($"  ! {e}");
+    try
+    {
+        action();
+        Console.WriteLine($"  {title}: виняток НЕ спрацював — інваріант відсутній!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"  {title}: {ex.GetType().Name} — {ex.Message}");
+    }
 }
