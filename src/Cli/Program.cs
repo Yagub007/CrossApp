@@ -2,6 +2,7 @@ using System.Text;
 using Core.Domain;
 using Core.Dto;
 using Core.Import;
+using Core.Services;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -45,6 +46,17 @@ if (File.Exists(csv))
     (IReadOnlyList<OrderLine> lines, IReadOnlyList<string> errors) = OrderAssembler.BuildLines(import);
     Console.WriteLine($"Побудовано рядків: {lines.Count}, відхилено: {errors.Count}");
 }
+
+// ===== Додаткове 2: інваріант між двома сутностями (у сервісі) =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 2: правило між двома сутностями (сервіс) ===");
+Customer customer = Customer.Create("C-100", "ТОВ Ромашка");
+var customerOrders = new List<Order>();
+var placement = new OrderPlacementService();
+for (int i = 1; i <= OrderPlacementService.MaxOpenOrders; i++)
+    customerOrders.Add(placement.PlaceOrder(customer, customerOrders, $"O-2{i:00}"));
+Console.WriteLine($"Відкритих замовлень у {customer.Id}: {customerOrders.Count} (ліміт {OrderPlacementService.MaxOpenOrders})");
+TryDo("понад ліміт відкритих замовлень", () => placement.PlaceOrder(customer, customerOrders, "O-999"));
 
 // ===== Мапінг ToDto / FromDto (для сховища тижня 5) =====
 Console.WriteLine();

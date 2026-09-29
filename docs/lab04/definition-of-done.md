@@ -75,7 +75,7 @@ git log --oneline | grep lab04
 
 ## Додаткові завдання (виконано)
 - **1. Зв'язок із тижнем 3** — [OrderAssembler.cs](../../src/Core/Domain/OrderAssembler.cs): `BuildLines(ImportResult)` → доменні рядки + перелік тих, що не пройшли інваріанти.
-- **2. Інваріант між двома сутностями** — пояснено, чому такі правила виносять у сервіс тижня 5 (сутність бачить лише себе; крос-сутнісне правило потребує стану кількох об'єктів/сховища).
+- **2. Інваріант між двома сутностями** — реалізовано в [OrderPlacementService.cs](../../src/Core/Services/OrderPlacementService.cs): «клієнт не може мати понад 3 відкритих замовлень» (охоплює `Customer` + його `Order`). Винесено в сервіс, бо сутність бачить лише себе; у коментарі пояснено чому.
 - **3. Явний стан + переходи** — [OrderStatus.cs](../../src/Core/Domain/OrderStatus.cs) + `Order.RequireTransition` зі switch expression: недопустимий перехід кидає `InvalidOperationException`.
 
 ```bash

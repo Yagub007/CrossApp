@@ -112,6 +112,8 @@ dotnet run --project src/Cli -- data/nope.csv     # неіснуючий фай�
 | 6 | Порожнє замовлення не підтвердити | `InvalidOperationException` | `Order.Confirm` |
 | 7 | Лише допустимі переходи статусів (Draft→Confirmed/Cancelled, Confirmed→Cancelled) | `InvalidOperationException` | `Order.RequireTransition` |
 
+Правило між **двома** сутностями («клієнт не може мати понад 3 відкритих замовлень») винесено в сервіс `Core/Services/OrderPlacementService` — сутність бачить лише себе, тому крос-сутнісні правила живуть у сервісі (тиждень 5).
+
 Мапінг сутність ↔ DTO — `Order.ToDto()` / `Order.FromDto()` (FromDto проходить ті самі інваріанти). Запуск демонстрації:
 
 ```bash

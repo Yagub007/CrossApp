@@ -169,6 +169,19 @@ private void RequireTransition(OrderStatus to)
 ```
 **Сказати:** «Дозволені переходи описані одним `switch` по парі `(звідки, куди)`. Усе, чого немає в списку (напр. `Cancelled -> Confirmed`), — заборонено.»
 
+### Дод. 2 — правило між двома сутностями (`OrderPlacementService.cs`)
+```csharp
+public Order PlaceOrder(Customer customer, IReadOnlyCollection<Order> existingOrders, string newOrderId)
+{
+    int openForCustomer = existingOrders.Count(
+        o => o.CustomerId == customer.Id && o.Status == OrderStatus.Draft);
+    if (openForCustomer >= MaxOpenOrders)
+        throw new InvalidOperationException($"Клієнт {customer.Id} вже має {openForCustomer} відкритих ...");
+    return Order.Create(newOrderId, customer.Id);
+}
+```
+**Сказати:** «Це правило охоплює **дві сутності** — клієнта і всі його замовлення. Одне `Order` не знає про інші, тому правило не можна покласти в сутність — воно живе у **сервісі**, який бачить і клієнта, і колекцію його замовлень. Після 3 відкритих замовлень 4-те кидає `InvalidOperationException`. З тижня 5 такі сервіси працюватимуть зі сховищем.»
+
 ### Дод. 1 — імпорт → сутності (`OrderAssembler.cs`)
 ```csharp
 foreach (ProductDto dto in import.Items)
