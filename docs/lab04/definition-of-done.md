@@ -21,51 +21,51 @@
 
 ---
 
-## 1. Сутності в Core/Domain, DTO лишились ✅
+## 1. Сутності в Core/Domain, DTO лишились 
 **Де:** [Order.cs](../../src/Core/Domain/Order.cs), [OrderLine.cs](../../src/Core/Domain/OrderLine.cs), [OrderStatus.cs](../../src/Core/Domain/OrderStatus.cs); DTO — [Core/Dto](../../src/Core/Dto).
 ```bash
 ls src/Core/Domain src/Core/Dto
 ```
 
-## 2. Інкапсуляція ✅
+## 2. Інкапсуляція 
 Приватне поле `_lines`, властивості `{ get; }` / `Status { get; private set; }`. Пряме присвоєння ззовні не компілюється.
 ```bash
 grep -n "private readonly\|get; private set;\|=> _quantity\|{ get; }" src/Core/Domain/Order.cs
 ```
 
-## 3. Фабрика, без публічного конструктора ✅
+## 3. Фабрика, без публічного конструктора 
 ```bash
 grep -n "private Order(\|private OrderLine(\|public static Order Create\|public static OrderLine Create" src/Core/Domain/*.cs
 grep -n "public Order(\|public OrderLine(" src/Core/Domain/*.cs || echo "публічних конструкторів немає"
 ```
 
-## 4. ≥ 3 інваріанти з повідомленнями ✅ (реалізовано 7)
+## 4. ≥ 3 інваріанти з повідомленнями  (реалізовано 7)
 ```bash
 grep -n "throw new" src/Core/Domain/Order.cs src/Core/Domain/OrderLine.cs
 ```
 Повний перелік — у таблиці [README](../../README.md) та у звіті.
 
-## 5. Правильні типи винятків ✅
+## 5. Правильні типи винятків 
 `ArgumentException` / `ArgumentOutOfRangeException` — некоректний вхід; `InvalidOperationException` — операція неможлива в поточному стані. Видно у виводі сценарію 2.
 
-## 6. ToDto / FromDto ✅
+## 6. ToDto / FromDto 
 ```bash
 grep -n "ToDto\|FromDto" src/Core/Domain/Order.cs src/Core/Domain/OrderLine.cs
 ```
 `FromDto` відновлює стан через `Create`/`AddLine`/`Confirm` — ті самі інваріанти.
 
-## 7. Cli: успіх + відмова, без stack trace ✅
+## 7. Cli: успіх + відмова, без stack trace 
 ```bash
 dotnet run --project src/Cli
 ```
 Сценарій 1 — успіх; сценарій 2 — try/catch виводить лише `тип — Message`.
 
-## 8. Колекції назовні лише для читання ✅
+## 8. Колекції назовні лише для читання 
 ```bash
 grep -n "AsReadOnly\|IReadOnlyList" src/Core/Domain/Order.cs
 ```
 
-## 9. Інваріанти в README + коміт lab04 ✅
+## 9. Інваріанти в README + коміт lab04 
 ```bash
 grep -n "Інваріанти" README.md
 git log --oneline | grep lab04

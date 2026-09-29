@@ -19,38 +19,38 @@
 
 ---
 
-## 1. Record-типи в Core/Dto ✅
+## 1. Record-типи в Core/Dto 
 **Де:** [ProductDto.cs](../../src/Core/Dto/ProductDto.cs), [CustomerDto.cs](../../src/Core/Dto/CustomerDto.cs), [ImportResult.cs](../../src/Core/Dto/ImportResult.cs)
 `ProductDto(Id, Name, Price, Category?)`, `CustomerDto(Id, Name, Email?)`, `ImportResult<T>(Items, Errors)`. `?` лише на Category та Email.
 ```bash
 ls src/Core/Dto
 ```
 
-## 2. switch expression з ≥ 3 патернами ✅
+## 2. switch expression з ≥ 3 патернами 
 **Де:** [ProductCsvImporter.cs](../../src/Core/Import/ProductCsvImporter.cs), метод `ParseLine`. Використано 5 патернів: властивості `{ Length: < 4 }`, константний `[_, "", _, _]`, охорона `when`, список зі зв'язуванням `[var id, ...]`, `_`.
 ```bash
 grep -n "switch\|=> new Parse\|when " src/Core/Import/ProductCsvImporter.cs
 ```
 
-## 3. Імпорт повертає дані РАЗОМ із помилками ✅
+## 3. Імпорт повертає дані РАЗОМ із помилками 
 `ImportResult<T>(Items, Errors)` — один пошкоджений рядок не перериває імпорт.
 ```bash
 dotnet run --project src/Cli        # 10 записів + 3 помилки
 ```
 
-## 4. data/sample.csv: 10+ рядків, 2–3 пошкоджені ✅
+## 4. data/sample.csv: 10+ рядків, 2–3 пошкоджені 
 **Де:** [data/sample.csv](../../data/sample.csv) — 10 коректних (P-001…P-010) + 3 пошкоджені (P-011 замало колонок, P-012 нечислова ціна, P-013 порожня назва).
 ```bash
 git check-ignore data/sample.csv || echo "файл у репозиторії"
 ```
 
-## 5. Cli: кількість + перші записи + пропущені з номерами ✅
+## 5. Cli: кількість + перші записи + пропущені з номерами 
 ```bash
 dotnet run --project src/Cli
 ```
 Виводить `Завантажено записів: 10`, перші 5, `Пропущено рядків: 3` з `рядок 12/13/14` і рядок статистики.
 
-## 6. File-scoped namespace, без зайвих using ✅
+## 6. File-scoped namespace, без зайвих using 
 ```bash
 grep -rL "namespace .*;" src/Core/Dto src/Core/Import || echo "усі file-scoped"
 ```
@@ -59,7 +59,7 @@ grep -rL "namespace .*;" src/Core/Dto src/Core/Import || echo "усі file-scope
 grep -nE "\.Split\(|int\.Parse|decimal\.Parse" src/Cli/Program.cs || echo "Cli чистий"
 ```
 
-## 7. Коміт lab03 ✅
+## 7. Коміт lab03 
 ```bash
 git log --oneline | grep lab03
 ```
