@@ -120,6 +120,28 @@ dotnet run --project src/Cli -- data/nope.csv     # неіснуючий фай�
 dotnet run --project src/Cli    # сценарій успіху + сценарії порушення інваріантів
 ```
 
+## Сервісний шар і сховища (лабораторна 5)
+
+Доменна логіка відв'язана від способу зберігання через абстракцію сховища.
+
+**Схема залежностей:**
+```
+Cli (composition root) → OrderService → IOrderStore → { InMemoryOrderStore | FileOrderStore }
+```
+
+- `Core/Abstractions/IOrderStore.cs` — контракт: `List / GetById / Add / Update / Remove`.
+- `Core/Storage/InMemoryOrderStore.cs` — словник у пам'яті (дані зникають після виходу).
+- `Core/Storage/FileOrderStore.cs` — JSON-файл: кеш + `EnsureLoaded` + `Flush` після кожної зміни; на диск ідуть DTO (`Order.ToDto()/FromDto()`).
+- `Core/Services/OrderService.cs` — залежить **лише** від `IOrderStore` (ін'єкція через конструктор); операції `CreateOrder / AddLine / Confirm / All / Find`.
+- Вибір реалізації — у `Program.cs` (composition root) за аргументом `--file`. Контейнер DI не використовується (ручний `new`).
+
+```bash
+dotnet run --project src/Cli           # Сховище: InMemoryOrderStore (дані тимчасові)
+dotnet run --project src/Cli -- --file # Сховище: FileOrderStore → data/catalog.json, дані зберігаються між запусками
+```
+
+**Що зміниться на тижні 11 (БД):** з'явиться нова реалізація `IOrderStore` (напр. `EfOrderStore` на Entity Framework Core). Міняється лише один рядок у composition root (`Program.cs`) — `OrderService` і домен не чіпаємо, бо вони залежать від інтерфейсу, а не від конкретного сховища.
+
 ## Середовище
 
 .NET SDK 10.0 (встановлений у `~/.dotnet`; у системі також є 8.0/7.0/6.0), macOS (osx-arm64). Крос-платформно: Windows x64 / Ubuntu x64.

@@ -1,79 +1,74 @@
+using System.Globalization;
 using System.Text;
+using Core;
+using Core.Abstractions;
 using Core.Domain;
-using Core.Dto;
-using Core.Import;
 using Core.Services;
+using Core.Storage;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-// ===== Сценарій 1: успіх — стан змінюється лише через методи =====
-Console.WriteLine("=== Сценарій 1: успіх ===");
-Order order = Order.Create("O-001", "C-001");
-order.AddLine("P-001", "Кава мелена 250г", 189.50m, 2);
-order.AddLine("P-003", "Цукор 1кг", 42.90m, 3);
-Console.WriteLine(order);
-order.Confirm();
-Console.WriteLine($"Після підтвердження: статус {order.Status}, сума {order.Total}");
+// ===== Composition Root — ЄДИНЕ місце з конкретними класами сховищ =====
+bool useFile = args.Contains("--file");
+string dataPath = Path.Combine(AppContext.BaseDirectory, "data", "catalog.json");
+IOrderStore store = useFile
+    ? new FileOrderStore(dataPath)
+    : new InMemoryOrderStore(SampleData.Orders());
+var service = new OrderService(store);          // ін'єкція сховища через конструктор
 
-// ===== Сценарій 2: порушення інваріантів — жодна відмова не змінює стан =====
-Console.WriteLine();
-Console.WriteLine("=== Сценарій 2: порушення інваріантів ===");
-Order draft = Order.Create("O-002", "C-002");
-TryDo("порожній клієнт", () => Order.Create("O-003", "   "));
-TryDo("кількість 0", () => draft.AddLine("P-001", "Кава", 189.50m, 0));
-TryDo("від'ємна ціна", () => draft.AddLine("P-002", "Чай", -5m, 1));
-TryDo("підтвердити порожнє", () => draft.Confirm());
-TryDo("додати рядок у підтверджене", () => order.AddLine("P-009", "Печиво", 54.80m, 1));
-TryDo("повторне підтвердження", () => order.Confirm());
-Console.WriteLine($"Стан order не змінився: статус {order.Status}, рядків {order.Lines.Count}, сума {order.Total}");
+Console.WriteLine($"Сховище: {store.GetType().Name}");
+Console.WriteLine($"Замовлень у сховищі на старті: {service.All().Count}");
 
-// ===== Додаткове 3: переходи станів (enum + switch expression) =====
-Console.WriteLine();
-Console.WriteLine("=== Додаткове 3: переходи статусів ===");
-Order cancelled = Order.Create("O-010", "C-010");
-cancelled.AddLine("P-001", "Кава мелена 250г", 189.50m, 1);
-cancelled.Cancel();
-Console.WriteLine($"O-010 статус: {cancelled.Status}");
-TryDo("підтвердити скасоване", () => cancelled.Confirm());
+// ===== Сценарій: створити, додати рядки, підтвердити, показати, знайти =====
+Order created = service.CreateOrder("C-001");
+service.AddLine(created.Id, "P-001", "Кава мелена 250г", 189.50m, 2);
+service.AddLine(created.Id, "P-003", "Цукор 1кг", 42.90m, 1);
+service.Confirm(created.Id);
+Console.WriteLine($"Створено й підтверджено {created.Id}: сума {Money(created.Total)}, статус {created.Status}");
 
-// ===== Додаткове 1: побудова доменних рядків з імпорту тижня 3 =====
-Console.WriteLine();
-Console.WriteLine("=== Додаткове 1: рядки з імпорту (дані + помилки) ===");
-string csv = Path.Combine("data", "sample.csv");
-if (File.Exists(csv))
-{
-    ImportResult<ProductDto> import = ProductCsvImporter.Load(csv);
-    (IReadOnlyList<OrderLine> lines, IReadOnlyList<string> errors) = OrderAssembler.BuildLines(import);
-    Console.WriteLine($"Побудовано рядків: {lines.Count}, відхилено: {errors.Count}");
-}
+Console.WriteLine("Перші замовлення:");
+foreach (Order o in service.All().Take(5))
+    Console.WriteLine($"  {o.Id}  клієнт {o.CustomerId,-6} рядків {o.Lines.Count}  сума {Money(o.Total),9}  {o.Status}");
 
-// ===== Додаткове 2: інваріант між двома сутностями (у сервісі) =====
-Console.WriteLine();
-Console.WriteLine("=== Додаткове 2: правило між двома сутностями (сервіс) ===");
-Customer customer = Customer.Create("C-100", "ТОВ Ромашка");
-var customerOrders = new List<Order>();
-var placement = new OrderPlacementService();
-for (int i = 1; i <= OrderPlacementService.MaxOpenOrders; i++)
-    customerOrders.Add(placement.PlaceOrder(customer, customerOrders, $"O-2{i:00}"));
-Console.WriteLine($"Відкритих замовлень у {customer.Id}: {customerOrders.Count} (ліміт {OrderPlacementService.MaxOpenOrders})");
-TryDo("понад ліміт відкритих замовлень", () => placement.PlaceOrder(customer, customerOrders, "O-999"));
+Order? found = service.Find(created.Id);
+Console.WriteLine($"Find({created.Id}): {(found is null ? "не знайдено" : found.ToString())}");
 
-// ===== Мапінг ToDto / FromDto (для сховища тижня 5) =====
+// ===== Сценарії відмови =====
 Console.WriteLine();
-Console.WriteLine("=== Мапінг ToDto / FromDto ===");
-OrderDto dto = order.ToDto();
-Order restored = Order.FromDto(dto);
-Console.WriteLine($"Відновлено з DTO: {restored}");
+Console.WriteLine("=== Сценарії відмови ===");
+TryDo("Confirm неіснуючого id", () => service.Confirm("NEMA-404"));
+TryDo("дубль id у сховищі", () => store.Add(created));   // created уже є
+
+// ===== Додаткове 2: пошук із предикатом =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 2: пошук із предикатом ===");
+IReadOnlyList<Order> confirmed = service.Search(o => o.Status == OrderStatus.Confirmed);
+Console.WriteLine($"Підтверджених замовлень: {confirmed.Count}");
+
+// ===== Додаткове 1: декоратор-кеш (той самий контракт) =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 1: CachingOrderStore (декоратор) ===");
+var caching = new CachingOrderStore(store);
+caching.List(); caching.List(); caching.List();        // 1 реальний виклик, далі з кешу
+Console.WriteLine($"Кеш-звернень (без походу в сховище): {caching.CacheHits}");
+
+// ===== Додаткове 3: та сама композиція через фабрику =====
+Console.WriteLine();
+Console.WriteLine("=== Додаткове 3: StoreFactory ===");
+IOrderStore viaFactory = StoreFactory.Create(args, dataPath);
+Console.WriteLine($"Фабрика повернула: {viaFactory.GetType().Name}");
 
 return 0;
 
-// Один обробник винятків для всіх сценаріїв: виводить тип і Message (без stack trace).
+static string Money(decimal value) => value.ToString("F2", CultureInfo.InvariantCulture);
+
+// Один обробник винятків: друкує тип і Message (без stack trace).
 static void TryDo(string title, Action action)
 {
     try
     {
         action();
-        Console.WriteLine($"  {title}: виняток НЕ спрацював — інваріант відсутній!");
+        Console.WriteLine($"  {title}: виняток НЕ спрацював!");
     }
     catch (Exception ex)
     {
