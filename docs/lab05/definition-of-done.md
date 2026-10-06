@@ -20,49 +20,49 @@
 
 ---
 
-## 1. Інтерфейс сховища в Core ✅
+## 1. Інтерфейс сховища в Core 
 **Де:** [IOrderStore.cs](../../src/Core/Abstractions/IOrderStore.cs) — `List / GetById / Add / Update / Remove`.
 ```bash
 cat src/Core/Abstractions/IOrderStore.cs
 ```
 
-## 2. Дві реалізації ✅
+## 2. Дві реалізації 
 **Де:** [InMemoryOrderStore.cs](../../src/Core/Storage/InMemoryOrderStore.cs) (словник), [FileOrderStore.cs](../../src/Core/Storage/FileOrderStore.cs) (JSON + кеш + Flush).
 ```bash
 ls src/Core/Storage
 ```
 
-## 3. Сервіс залежить лише від інтерфейсу ✅
+## 3. Сервіс залежить лише від інтерфейсу 
 Тип параметра конструктора — `IOrderStore`, не клас.
 ```bash
 grep -n "OrderService(IOrderStore" src/Core/Services/OrderService.cs
 grep -rn "FileOrderStore\|InMemoryOrderStore" src/Core/Services/ || echo "у сервісі конкретних сховищ немає"
 ```
 
-## 4. Перемикання через Cli; конкретні класи лише в Program.cs ✅
+## 4. Перемикання через Cli; конкретні класи лише в Program.cs 
 ```bash
 grep -n "new FileOrderStore\|new InMemoryOrderStore" src/Cli/Program.cs
 ```
 Поза Program.cs конкретні сховища згадуються лише у власних файлах і (дод.) у `StoreFactory`.
 
-## 5. Сценарій: додати / змінити / список / знайти ✅
+## 5. Сценарій: додати / змінити / список / знайти 
 ```bash
 dotnet run --project src/Cli
 ```
 `CreateOrder` → `AddLine` → `Confirm` → `All()` (список) → `Find(id)`.
 
-## 6. Помилка з людським повідомленням ✅
+## 6. Помилка з людським повідомленням 
 У виводі блок «Сценарії відмови»:
 - `Confirm неіснуючого id → Немає замовлення з id=...`
 - `дубль id → Замовлення з id=... уже існує.`
 
-## 7. DI-контейнер не підключено ✅
+## 7. DI-контейнер не підключено 
 ```bash
 grep -rn "Microsoft.Extensions.DependencyInjection" src/*/*.csproj src/**/*.cs || echo "контейнер не підключено"
 ```
 Ін'єкція — звичайним `new` у Program.cs (ручний DI).
 
-## 8. README + коміт lab05 ✅
+## 8. README + коміт lab05 
 ```bash
 grep -n "Сервісний шар" README.md
 git log --oneline | grep lab05

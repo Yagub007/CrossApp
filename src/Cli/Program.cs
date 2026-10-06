@@ -19,6 +19,13 @@ var service = new OrderService(store);          // ін'єкція сховищ�
 Console.WriteLine($"Сховище: {store.GetType().Name}");
 Console.WriteLine($"Замовлень у сховищі на старті: {service.All().Count}");
 
+// Інтерактивний режим: ввід команд з клавіатури (додати/видалити/знайти тощо).
+if (args.Contains("--menu"))
+{
+    RunMenu(service, store);
+    return 0;
+}
+
 // ===== Сценарій: створити, додати рядки, підтвердити, показати, знайти =====
 Order created = service.CreateOrder("C-001");
 service.AddLine(created.Id, "P-001", "Кава мелена 250г", 189.50m, 2);
@@ -61,6 +68,68 @@ Console.WriteLine($"Фабрика повернула: {viaFactory.GetType().Nam
 return 0;
 
 static string Money(decimal value) => value.ToString("F2", CultureInfo.InvariantCulture);
+
+// Інтерактивне меню: читає команди з консолі й викликає ті самі методи сервісу.
+static void RunMenu(OrderService service, IOrderStore store)
+{
+    Console.WriteLine("Команди: list | add | line | confirm | remove | find | exit");
+    while (true)
+    {
+        Console.Write("> ");
+        string? cmd = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (cmd is null or "exit" or "quit") break;
+
+        try
+        {
+            switch (cmd)
+            {
+                case "list":
+                    foreach (Order o in service.All())
+                        Console.WriteLine($"  {o.Id}  клієнт {o.CustomerId,-6} рядків {o.Lines.Count}  сума {Money(o.Total),9}  {o.Status}");
+                    break;
+
+                case "add":
+                    Console.Write("  клієнт id: ");
+                    Order created = service.CreateOrder(Console.ReadLine() ?? "");
+                    Console.WriteLine($"  створено замовлення {created.Id}");
+                    break;
+
+                case "line":
+                    Console.Write("  id замовлення: "); string oid = Console.ReadLine() ?? "";
+                    Console.Write("  товар id: "); string pid = Console.ReadLine() ?? "";
+                    Console.Write("  назва: "); string nm = Console.ReadLine() ?? "";
+                    Console.Write("  ціна: "); decimal.TryParse(Console.ReadLine(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price);
+                    Console.Write("  кількість: "); int.TryParse(Console.ReadLine(), out int qty);
+                    service.AddLine(oid, pid, nm, price, qty);
+                    Console.WriteLine("  рядок додано");
+                    break;
+
+                case "confirm":
+                    Console.Write("  id: "); service.Confirm(Console.ReadLine() ?? "");
+                    Console.WriteLine("  підтверджено");
+                    break;
+
+                case "remove":
+                    Console.Write("  id: "); bool ok = store.Remove(Console.ReadLine() ?? "");
+                    Console.WriteLine(ok ? "  видалено" : "  немає такого id");
+                    break;
+
+                case "find":
+                    Console.Write("  id: "); Order? f = service.Find(Console.ReadLine() ?? "");
+                    Console.WriteLine(f is null ? "  не знайдено" : $"  {f}");
+                    break;
+
+                default:
+                    Console.WriteLine("  невідома команда");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  Помилка: {ex.GetType().Name} — {ex.Message}");
+        }
+    }
+}
 
 // Один обробник винятків: друкує тип і Message (без stack trace).
 static void TryDo(string title, Action action)
